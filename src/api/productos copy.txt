@@ -1,0 +1,13 @@
+[{
+  "title": "Taza Grande",
+  "price": 1200,
+  "thumbnail": "https://res.cloudinary.com/nuco/image/upload/v1643143063/Productos/TazaGr_lpner0.jpg",
+  "id": 1
+},
+{
+  "title": "Taza Pequeña",
+  "price": 800,
+  "thumbnail": "https://res.cloudinary.com/nuco/image/upload/v1643143063/Productos/TazaPeq_lqjqjq.jpg",
+  "id": 2
+}
+]

@@ -2,70 +2,85 @@ const express = require('express')
 const routerProducts = express.Router();
 
 const Products = require('../api/ProductClass')
-const storeProducts = new Products()
+const productManager = new Products()
 
 const admin = true
 
-routerProducts.get('/', (req, res) => {
-    if (storeProducts.allProducts.length > 0) {
-        res.send(storeProducts.allProducts)
-    } else {
-        res.send('No hay productos')
-    }
-})
+routerProducts
+    .get('/', async (req, res) => {
+        try {
+            const allProducts = await productManager.getAll()
+            res.status(200).json({allProducts})
+        } catch (error) {
+            res.status(500).json({message: error.message})
+        }
+    })
 
-//GET: '/:id?' -  Obtener producto por su id 
-//(disponible para usuarios y administradores)
-routerProducts.get('/:id', (req, res) => {
-    const id = req.params.id
-    if (storeProducts.getById(id)) {
-        res.send(storeProducts.getById(id))
-    } else {
-        res.send('No hay productos con éste ID')
-    }
-})
-
-//POST: '/' - Incorporar productos al listado 
-//(disponible para administradores)
-routerProducts.post('/', (req, res) => {
-    if (admin) {
-    // const product = req.body
-    // console.log(product)
-    const newProduct = storeProducts.saveProduct(req.body)
-    console.log(newProduct)
-    res.send(newProduct)
-    } else {
-        res.send('No tiene permisos para realizar esta acción')
-    }
-})
-
-//PUT: '/:id' - Actualizar un producto por su id 
-//(disponible para administradores)
-routerProducts.put('/:id', (req, res) => {
-    if (admin) {
+    //GET: '/:id' -  Obtener producto por su id 
+    //(disponible para usuarios y administradores)
+    .get('/:id', async (req, res) => {
         const id = req.params.id
-        console.log(id)
-        const product = req.body
-        console.log(product)
-        const newProduct = storeProducts.updateProduct(id, product)
-        console.log(newProduct)
-        res.send(newProduct)
-    } else {
-        res.send('No tiene permisos para realizar esta acción')
-    }
-})
+        const product = await productManager.getById(id)
+        if (product) {
+            res.status(200).json({product})
+        } else {
+            res.status(200).json('No hay productos con éste id')
+        }
+    })
 
-//DELETE: '/:id' - Borrar un producto por su id (disponible para administradores)
-routerProducts.delete('/:id', (req, res) => {
-    if (admin) {
-        const id = req.params.id
-        console.log("aquí id " + id)
-        const product = storeProducts.deleteProduct(id)
-        console.log("aquí product" + product)
-        res.send(product)
-    } else {
-        res.send('No tiene permisos para realizar esta acción')
-    }
-})
+    //POST: '/' - Incorporar productos al listado 
+    //(disponible para administradores)
+    .post('/', async (req, res) => {
+        if (admin) {
+            const product = req.body
+            const newProduct = await productManager.save(product)
+            res.status(200).json({newProduct})
+        } else {
+            res.status(403).json({
+                error: -1,
+                description: `ruta ${req.baseUrl} no autorizada`,
+                status: 403
+            });
+        }
+    })
+
+    //PUT: '/:id' - Actualizar un producto por su id 
+    //(disponible para administradores)
+
+    //funciona bien si existe id de producto, si el id no existe se cae el servidor...
+    .put('/:id', async (req, res) => {
+        if (admin) {
+            const id = req.params.id
+            const product = req.body
+            let updatedProduct = await productManager.update(id, product)
+            if (updatedProduct.id) {
+                res.status(200).json({updatedProduct})
+            } else {
+                res.status(200).json('No hay productos con éste id')
+            }
+        } else {
+            res.status(403).json({
+                error: -1,
+                description: `ruta ${req.baseUrl} no autorizada`,
+                status: 403
+            });
+        }
+    })
+
+    //DELETE: '/:id' - Borrar un producto por su id 
+    //(disponible para administradores)
+    .delete('/:id', async (req, res) => {
+        if (admin) {
+            const id = req.params.id
+            const deletedProduct = await productManager.delete(id)
+            res.status(200).json({deletedProduct})
+        } else {
+            res.status(403).json({
+                error: -1,
+                description: `ruta ${req.baseUrl} no autorizada`,
+                status: 403
+            });
+        }
+    })
 
 module.exports = routerProducts

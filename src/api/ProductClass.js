@@ -1,87 +1,157 @@
+const fs = require("fs");
+const moment = require("moment");
+moment.locale("es");
+
 class ProductClass {
   constructor() {
-    this.product = [];
+    this.path = "./src/api/productos.txt";
+    //this.product = [];
     this.productId = 0;
     this.timestamp = Date.now();
+    this.date = moment().format("LLLL");
+    this.name = "";
+    this.description = "";
+    this.code = "";
+    this.img = "";
+    this.price = 0;
+    this.stock = 0;
   }
 
-  get allProducts() {
+  //traigo todos los productos
+  async getAll() {
     try {
-      return this.product;
+      let data = await fs.promises.readFile(this.path, "utf-8");
+      if (data) {
+        this.product = JSON.parse(data);
+        return this.product;
+      } else {
+        return [{ message: "No hay productos", }];
+      }
     } catch (error) {
-      throw new Error("Se produjo un error en allProducts: " + error.message);
-    }
-  }
-
-  getById(idProduct) {
-    try {
-      return this.product.find((product) => product.id === parseInt(idProduct));
-    } catch (error) {
-      throw new Error("Hubo un error en getById " + error.message);
-    }
-  }
-
-  saveProduct(product, idProduct) {
-    try {
-      this.productId++;
-      const addNewProduct = {
-        // title: product.title,
-        // price: product.price,
-        // url: product.url,
-        // id: this.productId,
-        // timestamp: this.timestamp
-        title: `product ${this.productId}`,
-        price: this.productId * 10,
-        url: 'https://via.placeholder.com/200',
-        id: this.productId,
-        timestamp: this.timestamp
-      };
-      this.product.push(addNewProduct);
-      return addNewProduct;
-    } catch (error) {
+      if (error.code === "ENOENT") {
+        await fs.promises.writeFile(this.path, JSON.stringify([]));
+        return [{ message: "Aún no hay productos en la base de datos" }];
+      } 
       throw new Error(
-        "Se produjo un error al guardar el producto : " + error.message
+        "Se produjo un error en getAllProducts: " + error.message
       );
     }
   }
-
-  updateProduct(idProduct, product) {
+  //agrego un producto
+  async save(addedProduct) {
     try {
-      const updateProduct = {
-        title: `product ${idProduct}`,
-        price: idProduct * 10,
-        url: 'https://via.placeholder.com/200',
-        id: idProduct,
-        timestamp: this.timestamp
+      let data = await fs.promises.readFile(this.path, "utf-8");
+      if (data) {
+        this.product = JSON.parse(data);
+        this.productId = this.product.length;
+      }
+      const newProduct = {
+        id: this.productId + 1,
+        timestamp: this.timestamp,
+        date: this.date, 
+        name: this.name,
+        description: this.description,
+        code: this.code,
+        img: this.img,
+        price: this.price,
+        stock: this.stock,
       };
-      const findIndex = this.product.findIndex((product) => product.id === idProduct);
-      this.product[findIndex] = updateProduct;
-      return updateProduct;
+      this.product.push(newProduct);
+      fs.promises.writeFile(this.path, JSON.stringify(this.product, null, 2));
+      return newProduct;
     } catch (error) {
-      throw new Error(
-        "Se produjo un error al actualizar el producto : " + error.message
-      );
+      throw new Error("Se produjo un error en save: " + error.message);
     }
   }
-
-//return this.product.find((product) => product.id == parseInt(idProduct));
-
-  deleteProduct(idProduct) {
+  //obtengo por id
+  async getById(id) {
     try {
-      this.product = this.product.filter((product) => product.id !== idProduct);
+      let data = await fs.promises.readFile(this.path, "utf-8");
+      if (data) {
+        this.product = JSON.parse(data);
+        let product = this.product.find((product) => product.id == id);
+        return product;
+      } else {
+        return [{ message: "No hay productos con id: " + id, }];
+      }
     } catch (error) {
-      throw new Error("Hubo un error al eliminar " + error.message);
+      throw new Error("Se produjo un error en getById: " + error.message);
     }
   }
-
-  deleteAllProducts() {
+  //actualizo un producto
+  async update(id, product) {
     try {
-      this.product = [];
+      let data = await fs.promises.readFile(this.path, "utf-8");
+      if (data) {
+        let products = JSON.parse(data);
+        let index = products.findIndex((product) => product.id == id);
+        let updatedProduct = {
+          id: products[index].id,
+          timestamp: products[index].timestamp,
+          date: products[index].date,
+          name: products[index].name,
+          description: products[index].description,
+          code: products[index].code,
+          img: products[index].img,
+          price: products[index].price,
+          stock: products[index].stock,
+          ...product,
+        };
+        products[index] = updatedProduct;
+        fs.promises.writeFile(this.path, JSON.stringify(products, null, 2));
+        return updatedProduct;
+      } else {
+        return [{ message: "No hay productos con id: " + id }];
+      }
     } catch (error) {
-      throw new Error("Hubo un error al eliminar todos los productos " + error.message);
+      throw new Error("Se produjo un error en update: " + error.message);
     }
   }
-
+  //borro un producto
+  async delete(id) {
+    try {
+      let data = await fs.promises.readFile(this.path, "utf-8");
+      if (data) {
+        this.product = JSON.parse(data);
+        let index = this.product.findIndex(
+          (product) => product.id == id
+        );
+        if (index != -1) {
+          this.product.splice(index, 1);
+          fs.promises.writeFile(
+            this.path,
+            JSON.stringify(this.product, null, 2)
+          );
+          return { message: "Producto borrado" };
+        } else {
+          return [{ message: "No hay productos con id: " + id, }];
+        }
+      } else {
+        return [{ message: "No hay productos" }];
+      }
+    } catch (error) {
+      throw new Error("Se produjo un error en delete: " + error.message);
+    }
+  }
+  //borro todos los productos
+  async deleteAll() {
+    try {
+      let data = await fs.promises.readFile(this.path, "utf-8");
+      if (data) {
+        this.product = JSON.parse(data);
+        this.product = [];
+        fs.promises.writeFile(this.path, JSON.stringify(this.product, null, 2));
+        return { message: "Productos borrados" };
+      } else {
+        return [{ message: "No hay productos", }];
+      }
+    } catch (error) {
+      throw new Error("Se produjo un error en deleteAll: " + error.message);
+    }
+  }
 }
 
 module.exports = ProductClass;
+
+
+
